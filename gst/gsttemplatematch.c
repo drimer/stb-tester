@@ -224,6 +224,7 @@ static void gst_templatematch_rebuild_dist_image (StbtTemplateMatch * filter);
 static void gst_templatematch_rebuild_template_images (
     StbtTemplateMatch * filter);
 
+
 /* GObject vmethod implementations */
 
 static void
@@ -399,6 +400,7 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       break;
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK(filter);
+      mydebug ("template-match: received set-property", g_value_get_enum (value));
       while (filter->singleFrameData) {
 	g_cond_wait (&filter->singleFrameModeModified,
 		     GST_OBJECT_GET_LOCK (filter));
@@ -447,6 +449,8 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
       break;
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK (filter);
+      mydebug ("template-match: received get-property",
+		filter->singleFrameMode);
       g_value_set_enum (value, filter->singleFrameMode);
       GST_OBJECT_UNLOCK (filter);
       break;
@@ -528,6 +532,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
 
   if ((!filter) || (!buf)) {
+    mydebug ("template-match: No filter or buffer... Returning GST_FLOW_OK", -1);
     return GST_FLOW_OK;
   }
   GST_DEBUG_OBJECT (filter, "Buffer size %u ", GST_BUFFER_SIZE (buf));
@@ -539,6 +544,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
       g_cond_wait (&filter->singleFrameModeModified,
                    GST_OBJECT_GET_LOCK (filter));
     }
+    mydebug ("template-match: single data was changed, exiting wait_for_cond", -1);
   }
 
   if (filter->capsInitialised && filter->templateImageAcquired) {
@@ -604,6 +610,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   if (m) {
     gst_element_post_message (GST_ELEMENT (filter), m);
   }
+  mydebug ("template-match: frame processed", -1);
   return gst_pad_push (filter->srcpad, buf);
 }
 

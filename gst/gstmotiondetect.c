@@ -224,6 +224,16 @@ gst_motiondetect_finalize (GObject * object)
   }
 }
 
+void mydebug (char str[], gint value) {
+  FILE *f = fopen("/tmp/debug.txt", "a+");
+  if (value == -1) {
+    fprintf(f, "%s\n", str);
+  } else {
+    fprintf(f, "%s\tvalue = %i\n", str, value);
+  }
+  fclose(f);
+}
+
 static void
 gst_motiondetect_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
@@ -259,6 +269,7 @@ gst_motiondetect_set_property (GObject * object, guint prop_id,
       break;
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK (filter);
+      mydebug ("motion-detect: received set-property", g_value_get_enum (value));
       while (filter->singleFrameData) {
 	g_cond_wait (&filter->singleFrameModeModified,
 		     GST_OBJECT_GET_LOCK (filter));
@@ -298,6 +309,8 @@ gst_motiondetect_get_property (GObject * object, guint prop_id,
       break;
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK (filter);
+      mydebug ("motiondetect: received get-property",
+	       filter->singleFrameMode);
       g_value_set_enum (value, filter->singleFrameMode);
       GST_OBJECT_UNLOCK (filter);
       break;
@@ -396,6 +409,7 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
   GstMessage *m = NULL;
   StbtMotionDetect *filter = GST_MOTIONDETECT (trans);
   if ((!filter) || (!buf)) {
+    mydebug ("motiondetect: No filter or buffer... Returning GST_FLOW_OK", -1);
     return GST_FLOW_OK;
   }
 
@@ -405,6 +419,7 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
       g_cond_wait (&filter->singleFrameModeModified,
                    GST_OBJECT_GET_LOCK (filter));
     }
+    mydebug ("motiondetect: single data was changed, exiting wait_for_cond", -1);
   }
 
   if (filter->enabled && filter->state != MOTION_DETECT_STATE_INITIALISING) {
@@ -477,6 +492,8 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
   if (m) {
     gst_element_post_message (GST_ELEMENT (filter), m);
   }
+
+  mydebug ("motiondetect: frame processed", -1);
 
   return GST_FLOW_OK;
 }
